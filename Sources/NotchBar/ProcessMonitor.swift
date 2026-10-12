@@ -58,6 +58,7 @@ final class ProcessMonitor: ObservableObject {
 
     /// Quits an app politely through AppKit, or sends SIGTERM to a standalone process.
     func quit(_ usage: AppUsage) {
+        guard !ClaudeStore.isDemo else { return }
         if let path = usage.appPath {
             let running = NSWorkspace.shared.runningApplications.filter { $0.bundleURL?.path == path }
             if !running.isEmpty {
@@ -65,7 +66,7 @@ final class ProcessMonitor: ObservableObject {
                 return
             }
         }
-        usage.pids.forEach { kill($0, SIGTERM) }
+        usage.pids.filter { $0 > 0 }.forEach { kill($0, SIGTERM) }
     }
 
     private func sample() {
@@ -78,6 +79,7 @@ final class ProcessMonitor: ObservableObject {
 
     /// Runs on `queue`.
     private func collect() -> [AppUsage] {
+        if ClaudeStore.isDemo { return Self.demoApps }
         let capacity = Int(proc_listallpids(nil, 0)) + 64
         var pids = [pid_t](repeating: 0, count: capacity)
         let count = Int(proc_listallpids(&pids, Int32(capacity * MemoryLayout<pid_t>.stride)))
@@ -120,6 +122,13 @@ final class ProcessMonitor: ObservableObject {
             AppUsage(id: key, name: group.name, appPath: group.appPath, pids: group.pids, memoryBytes: group.memory, cpu: group.cpu)
         }
     }
+
+    /// Placeholder pids are 0; `quit` ignores them and is disabled in demo mode anyway.
+    private static let demoApps = [
+        AppUsage(id: "safari", name: "Safari", appPath: "/Applications/Safari.app", pids: Array(repeating: 0, count: 12), memoryBytes: 2_480_000_000, cpu: 0.18),
+        AppUsage(id: "mail", name: "Mail", appPath: "/System/Applications/Mail.app", pids: Array(repeating: 0, count: 3), memoryBytes: 910_000_000, cpu: 0.04),
+        AppUsage(id: "node", name: "node", appPath: nil, pids: [0], memoryBytes: 740_000_000, cpu: 0.31),
+    ]
 
     /// Helpers nested inside an app bundle belong to the outermost .app; anything else is
     /// named after its argv[0], which keeps titles such as "ng serve (my-app)".

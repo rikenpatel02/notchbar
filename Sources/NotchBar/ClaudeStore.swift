@@ -44,12 +44,28 @@ final class ClaudeStore: ObservableObject {
     /// Sessions backed by a status file whose terminal still runs `claude`.
     private var liveSessionIds = Set<String>()
 
+    /// `NOTCHBAR_DEMO=1`: sample sessions and apps instead of real ones, for screenshots.
+    static let isDemo = ProcessInfo.processInfo.environment["NOTCHBAR_DEMO"] == "1"
+
     init() {
+        if Self.isDemo {
+            sessions = Self.demoSessions
+            return
+        }
         syncFromStatusFiles()
         pruneTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
             self?.syncFromStatusFiles()
             self?.prune()
         }
+    }
+
+    private static var demoSessions: [ClaudeSession] {
+        let now = Date()
+        return [
+            ClaudeSession(id: "demo-1", project: "web-app", status: .working, detail: "Edit  Header.tsx", updatedAt: now, workingSince: now.addingTimeInterval(-252)),
+            ClaudeSession(id: "demo-2", project: "api-server", status: .waiting, detail: "Waiting for your input", updatedAt: now.addingTimeInterval(-40)),
+            ClaudeSession(id: "demo-3", project: "docs-site", status: .done, detail: "Finished", updatedAt: now.addingTimeInterval(-300)),
+        ]
     }
 
     var hasActivity: Bool {

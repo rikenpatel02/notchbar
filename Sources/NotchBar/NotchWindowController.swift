@@ -31,7 +31,8 @@ private final class FirstMouseHostingView<Content: View>: NSHostingView<Content>
 }
 
 final class NotchWindowController {
-    private static let panelHeight: CGFloat = 340
+    /// Tallest island (notch + stats + top apps + 4 sessions) plus room for its shadow.
+    private static let panelHeight: CGFloat = 460
     private static let hoverSlop: CGFloat = 6
     private static let closeDelay: TimeInterval = 0.3
 

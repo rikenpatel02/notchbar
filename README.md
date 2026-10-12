@@ -2,6 +2,8 @@
 
 A macOS menu bar app that shows a "Dynamic Island" for live activities, Claude Code and system stats.
 
+![NotchBar expanded panel with clock, CPU and memory gauges, top apps and Claude Code sessions](docs/images/hero.png)
+
 - **Macs with a notch:** the island wraps around the hardware notch. That area is dead space, so it never covers menu bar icons.
 - **Macs without a notch:** it works like Live Activities in macOS Tahoe. The compact view is a menu bar item, and clicking it drops the expanded view down *below* the menu bar. Right-click the item for settings.
 
@@ -13,6 +15,17 @@ Always shows, left to right:
 - **Network:** download and upload rates across Wi-Fi, Ethernet and cellular
 
 Turn the stats off with **Show Stats in Menu Bar** in the right-click menu. Sampling then stops.
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/approve.png" alt="Approve or deny a Claude Code tool call from the island"></td>
+    <td width="50%"><img src="docs/images/banner.png" alt="Live activity banner when Claude finishes"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Approve or deny</b> Claude Code tool calls</td>
+    <td align="center"><b>Live banners</b> when Claude finishes or needs you</td>
+  </tr>
+</table>
 
 ## Expanded panel
 - Shortcuts (Downloads, Screenshot, System Settings), battery, clock
@@ -61,6 +74,9 @@ $B toast "Build passed" "notchbar - 12s" checkmark.circle.fill green
 $B open | close | toggle | hide | show
 ```
 Commands are sent to the running app as a distributed notification, so scripts and hooks need no extra permissions.
+
+## Demo mode
+`NOTCHBAR_DEMO=1 build/NotchBar.app/Contents/MacOS/NotchBar` shows sample sessions and apps instead of your own, and ignores real Claude Code events. Use it for screenshots; Quit is disabled while it runs.
 
 ## Privacy
 Everything stays on your Mac. NotchBar makes no network requests and collects nothing; the network meter only reads interface byte counters. Claude Code events travel between the hook and the app as local distributed notifications.

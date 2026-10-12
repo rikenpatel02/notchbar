@@ -56,6 +56,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let claude = model.claude
         let session = command.session ?? "unknown"
         let project = command.project ?? "Claude"
+        if ClaudeStore.isDemo && command.action.hasPrefix("claude.") && !session.hasPrefix("demo") { return }
 
         func update(_ status: ClaudeSession.Status, detail: String) {
             claude.update(
