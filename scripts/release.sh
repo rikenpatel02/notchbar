@@ -25,8 +25,14 @@ if [[ ! -x "$VENV/bin/dmgbuild" ]]; then
   python3 -m venv "$VENV"
   "$VENV/bin/pip" install --quiet "dmgbuild==1.6.5"
 fi
+# The first-open guide, under a name that says what it's for and with a large icon
+# (Finder's shrunken preview of the guide would be unreadable).
+GUIDE="build/If NotchBar won't open.png"
+cp Resources/open-guide.png "$GUIDE"
+swift scripts/set-icon.swift Resources/open-guide-icon.png "$GUIDE"
+
 rm -f "$DMG"
-"$VENV/bin/dmgbuild" -s scripts/dmg-settings.py -D app=build/NotchBar.app "NotchBar $VERSION" "$DMG"
+"$VENV/bin/dmgbuild" -s scripts/dmg-settings.py -D app=build/NotchBar.app -D guide="$GUIDE" "NotchBar $VERSION" "$DMG"
 
 if [[ -n "${SIGN_IDENTITY:-}" ]]; then
   codesign --force --timestamp --sign "$SIGN_IDENTITY" "$DMG"

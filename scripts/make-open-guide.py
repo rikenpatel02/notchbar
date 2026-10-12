@@ -1,4 +1,5 @@
-"""Draws "Resources/How to open NotchBar.png", the guide shipped inside the DMG.
+"""Draws the "If NotchBar won't open" guide shipped inside the DMG, plus the large icon
+Finder shows for it (a shrunken preview of the guide would be unreadable).
 
 Releases that aren't notarized are blocked by macOS on first open; this walks users
 through the three screens they will see. Requires Pillow.
@@ -129,8 +130,23 @@ def main():
     d.text((W / 2, 948), "You only do this once for each new version.  Questions: github.com/rikenpatel02/notchbar",
            font=font(24), fill=MUTED, anchor="mm")
 
-    canvas.convert("RGB").save(os.path.join(ROOT, "Resources", "How to open NotchBar.png"), dpi=(144, 144), optimize=True)
-    print("Wrote Resources/How to open NotchBar.png")
+    canvas.convert("RGB").save(os.path.join(ROOT, "Resources", "open-guide.png"), dpi=(120, 120), optimize=True)
+    guide_icon().save(os.path.join(ROOT, "Resources", "open-guide-icon.png"))
+    print("Wrote Resources/open-guide.png and Resources/open-guide-icon.png")
+
+
+def guide_icon():
+    """A bold question-mark tile that stays legible at Finder icon sizes."""
+    size = 1024
+    icon = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    shadow = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    ImageDraw.Draw(shadow).rounded_rectangle((110, 130, 914, 934), 190, fill=(60, 30, 20, 90))
+    icon.alpha_composite(shadow.filter(ImageFilter.GaussianBlur(30)))
+    d = ImageDraw.Draw(icon)
+    d.rounded_rectangle((100, 100, 924, 924), 190, fill=ACCENT)
+    centered(d, (512, 470), "?", font(560, "Bold"), (255, 255, 255))
+    centered(d, (512, 790), "HOW TO OPEN", font(96, "Bold"), (255, 255, 255))
+    return icon
 
 
 if __name__ == "__main__":

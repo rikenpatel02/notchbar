@@ -16,7 +16,7 @@ A macOS menu bar app that shows a "Dynamic Island" for live activities, Claude C
 
 Requires macOS 13 or later, on Apple Silicon or Intel. If you open it straight from the disk image or Downloads, NotchBar offers to move itself to Applications. It needs a fixed location so Claude Code can find it and it can open at login.
 
-**"Apple could not verify NotchBar"?** Builds that aren't notarized by Apple show this the first time. Open **System Settings > Privacy & Security**, scroll to Security, click **Open Anyway** next to NotchBar, and confirm with your password. You only do this once. The disk image includes **How to open NotchBar**, a picture guide to these steps.
+**"Apple could not verify NotchBar"?** Builds that aren't notarized by Apple show this the first time. Open **System Settings > Privacy & Security**, scroll to Security, click **Open Anyway** next to NotchBar, and confirm with your password. You only do this once. The disk image includes **If NotchBar won't open**, a picture guide to these steps.
 
 ## First launch and permissions
 NotchBar has no Dock icon; it lives in the menu bar. On first launch a setup window walks through three optional steps. Reopen it any time with **Setup...** in the menu bar item's right-click menu, or `NotchBar setup` from a terminal.
