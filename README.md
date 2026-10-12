@@ -10,21 +10,18 @@ A macOS menu bar app that shows a "Dynamic Island" for live activities, Claude C
 - **Macs without a notch:** it works like Live Activities in macOS Tahoe. The compact view is a menu bar item, and clicking it drops the expanded view down *below* the menu bar. Right-click the item for settings.
 
 ## Install
-Paste this into Terminal:
+1. Download **NotchBar-x.y.z.dmg** from [Releases](https://github.com/rikenpatel02/notchbar/releases/latest), open it and drag **NotchBar** onto **Applications**.
+2. Open NotchBar from Applications. If you open it from the disk image or Downloads instead, it offers to move itself, because it needs a fixed location for Claude Code and Open at login.
+
+Or install and update from Terminal:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/rikenpatel02/notchbar/main/install.sh | bash
 ```
 
-It downloads the latest release, checks it against the release's SHA-256 checksum, copies NotchBar into Applications and opens it. Run it again any time to update. Read [install.sh](install.sh) first if you like; it's short.
+It downloads the latest release, checks its SHA-256 checksum, copies NotchBar into Applications and opens it. [install.sh](install.sh) is short if you want to read it first.
 
-Requires macOS 13 or later, on Apple Silicon or Intel.
-
-### Or download the DMG
-1. Download **NotchBar-x.y.z.dmg** from [Releases](https://github.com/rikenpatel02/notchbar/releases/latest), open it and drag **NotchBar** onto **Applications**.
-2. Open NotchBar from Applications. If you open it from the disk image or Downloads instead, it offers to move itself, because it needs a fixed location for Claude Code and Open at login.
-
-**"Apple could not verify NotchBar"?** Releases aren't notarized by Apple yet, so macOS blocks the first open of a downloaded copy (the Terminal install above avoids this). Click **Done**, open **System Settings > Privacy & Security**, scroll to Security, click **Open Anyway** next to NotchBar, and confirm with your password. You only do this once per version. The disk image includes **If NotchBar won't open**, a picture guide to these steps.
+Releases are signed with a Developer ID and notarized by Apple, so macOS opens them normally. Requires macOS 13 or later, on Apple Silicon or Intel.
 
 ## First launch and permissions
 NotchBar has no Dock icon; it lives in the menu bar. On first launch a setup window walks through three optional steps. Reopen it any time with **Setup...** in the menu bar item's right-click menu, or `NotchBar setup` from a terminal.
@@ -119,7 +116,7 @@ Commands are sent to the running app as a distributed notification, so scripts a
 ## Releasing
 `scripts/release.sh 0.2.0` builds a universal app (Apple Silicon and Intel) and `build/NotchBar-0.2.0.dmg`, laid out as NotchBar beside an Applications shortcut (via `dmgbuild`, installed into `build/.venv` on first run). Pushing a tag such as `v0.2.0` runs the same script in GitHub Actions and publishes the DMG to a GitHub Release.
 
-Without signing credentials the DMG is ad-hoc signed, so users approve it once in Privacy & Security. To sign and notarize, join the Apple Developer Program, create a **Developer ID Application** certificate, and add these repository secrets: `MACOS_CERTIFICATE` (base64 .p12), `MACOS_CERTIFICATE_PASSWORD` and `SIGN_IDENTITY` for signing, plus an App Store Connect API key for notarization: `APPSTORE_API_KEY` (base64 .p8), `APPSTORE_API_KEY_ID` and `APPSTORE_API_ISSUER`. An app-specific password (`APPLE_ID`, `APPLE_TEAM_ID`, `APPLE_APP_PASSWORD`) works instead of the API key. Locally, set `SIGN_IDENTITY` plus `NOTARY_PROFILE` (from `xcrun notarytool store-credentials`). The icon is drawn by `scripts/make-icon.py` and the in-DMG guide by `scripts/make-open-guide.py`.
+Without signing credentials the DMG is ad-hoc signed; macOS then blocks its first open, so the DMG includes an "If NotchBar won't open" guide to Open Anyway in Privacy & Security. To sign and notarize, join the Apple Developer Program, create a **Developer ID Application** certificate, and add these repository secrets: `MACOS_CERTIFICATE` (base64 .p12), `MACOS_CERTIFICATE_PASSWORD` and `SIGN_IDENTITY` for signing, plus an App Store Connect API key for notarization: `APPSTORE_API_KEY` (base64 .p8), `APPSTORE_API_KEY_ID` and `APPSTORE_API_ISSUER`. An app-specific password (`APPLE_ID`, `APPLE_TEAM_ID`, `APPLE_APP_PASSWORD`) works instead of the API key. Locally, set `SIGN_IDENTITY` plus `NOTARY_PROFILE` (from `xcrun notarytool store-credentials`). The icon is drawn by `scripts/make-icon.py` and the in-DMG guide by `scripts/make-open-guide.py`.
 
 ## Privacy
 Everything stays on your Mac. NotchBar makes no network requests and collects nothing; the network meter only reads interface byte counters. Claude Code events travel between the hook and the app as local distributed notifications.
