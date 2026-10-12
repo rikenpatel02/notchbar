@@ -4,7 +4,7 @@
 
 A macOS menu bar app that shows a "Dynamic Island" for live activities, Claude Code and system stats.
 
-![NotchBar expanded panel with clock, CPU and memory gauges, top apps and Claude Code sessions](docs/images/hero.png)
+![NotchBar demo: a Claude finished banner, the expanded panel with system stats and sessions, then approving a Bash command from the island](docs/images/demo.webp)
 
 - **Macs with a notch:** the island wraps around the hardware notch. That area is dead space, so it never covers menu bar icons.
 - **Macs without a notch:** it works like Live Activities in macOS Tahoe. The compact view is a menu bar item, and clicking it drops the expanded view down *below* the menu bar. Right-click the item for settings.
@@ -13,7 +13,13 @@ A macOS menu bar app that shows a "Dynamic Island" for live activities, Claude C
 1. Download **NotchBar-x.y.z.dmg** from [Releases](https://github.com/rikenpatel02/notchbar/releases/latest), open it and drag **NotchBar** onto **Applications**.
 2. Open NotchBar from Applications. If you open it from the disk image or Downloads instead, it offers to move itself, because it needs a fixed location for Claude Code and Open at login.
 
-Or install and update from Terminal:
+Or with [Homebrew](https://brew.sh):
+
+```bash
+brew install --cask rikenpatel02/tap/notchbar
+```
+
+Or install and update from Terminal without Homebrew:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/rikenpatel02/notchbar/main/install.sh | bash
@@ -45,6 +51,8 @@ Always shows, left to right:
 - **Network:** download and upload rates across Wi-Fi, Ethernet and cellular
 
 Turn the stats off with **Show Stats in Menu Bar** in the right-click menu. Sampling then stops.
+
+![NotchBar expanded panel with clock, CPU and memory gauges, top apps and Claude Code sessions](docs/images/hero.png)
 
 <table>
   <tr>
@@ -123,3 +131,5 @@ Everything stays on your Mac. NotchBar makes no network requests and collects no
 
 ## License
 MIT. See [LICENSE](LICENSE).
+
+NotchBar is an independent project and is not affiliated with or endorsed by Anthropic. Claude and Claude Code are trademarks of Anthropic.

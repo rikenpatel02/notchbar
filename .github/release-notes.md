@@ -1,6 +1,8 @@
 ## Install
 Download **NotchBar-x.y.z.dmg** below, open it and drag **NotchBar** onto **Applications**. Then open NotchBar from Applications.
 
+Or with Homebrew: `brew install --cask rikenpatel02/tap/notchbar`
+
 Or install or update from Terminal:
 
 ```bash
