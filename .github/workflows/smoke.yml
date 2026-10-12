@@ -1,0 +1,53 @@
+name: Smoke test
+
+# Launches a built NotchBar on a fresh Apple Silicon runner and fails if it crashes.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      release:
+        description: "Release tag to test instead of building (e.g. v0.1.0)"
+        required: false
+
+jobs:
+  launch:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Get the app
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE: ${{ inputs.release }}
+        run: |
+          if [[ -n "$RELEASE" ]]; then
+            gh release download "$RELEASE" --pattern "*.dmg" --dir dist
+            MOUNT=$(hdiutil attach -nobrowse -readonly dist/*.dmg | tail -1 | cut -f3)
+            cp -R "$MOUNT/NotchBar.app" /Applications/
+            hdiutil detach "$MOUNT"
+          else
+            ./build.sh --universal
+            cp -R build/NotchBar.app /Applications/
+          fi
+          uname -m
+          lipo -archs /Applications/NotchBar.app/Contents/MacOS/NotchBar
+
+      - name: Launch and stay alive for 15 seconds
+        run: |
+          open /Applications/NotchBar.app
+          sleep 15
+          pgrep -x NotchBar || { echo "::error::NotchBar is not running after launch"; exit 1; }
+          /Applications/NotchBar.app/Contents/MacOS/NotchBar open
+          sleep 5
+          pgrep -x NotchBar || { echo "::error::NotchBar crashed after opening the panel"; exit 1; }
+
+      - name: Crash reports
+        if: always()
+        run: |
+          for f in ~/Library/Logs/DiagnosticReports/NotchBar* /Library/Logs/DiagnosticReports/NotchBar*; do
+            [[ -f "$f" ]] && { echo "== $f"; head -c 12000 "$f"; }
+          done
+          log show --last 5m --predicate 'process == "NotchBar"' --style compact | tail -60 || true
