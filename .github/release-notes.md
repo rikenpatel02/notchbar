@@ -3,6 +3,8 @@
 > 1. Click **Done**.
 > 2. Open **System Settings > Privacy & Security** and scroll down to Security.
 > 3. Click **Open Anyway** next to NotchBar, then confirm with your password. You only do this once.
+>
+> The disk image also includes **How to open NotchBar**, an illustrated version of these steps.
 
 ## Install
 1. Download **NotchBar-x.y.z.dmg** below and open it.

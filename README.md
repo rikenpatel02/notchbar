@@ -16,7 +16,7 @@ A macOS menu bar app that shows a "Dynamic Island" for live activities, Claude C
 
 Requires macOS 13 or later, on Apple Silicon or Intel. If you open it straight from the disk image or Downloads, NotchBar offers to move itself to Applications. It needs a fixed location so Claude Code can find it and it can open at login.
 
-**"Apple could not verify NotchBar"?** Builds that aren't notarized by Apple show this the first time. Open **System Settings > Privacy & Security**, scroll to Security, click **Open Anyway** next to NotchBar, and confirm with your password. You only do this once.
+**"Apple could not verify NotchBar"?** Builds that aren't notarized by Apple show this the first time. Open **System Settings > Privacy & Security**, scroll to Security, click **Open Anyway** next to NotchBar, and confirm with your password. You only do this once. The disk image includes **How to open NotchBar**, a picture guide to these steps.
 
 ## First launch and permissions
 NotchBar has no Dock icon; it lives in the menu bar. On first launch a setup window walks through three optional steps. Reopen it any time with **Setup...** in the menu bar item's right-click menu, or `NotchBar setup` from a terminal.
@@ -111,7 +111,7 @@ Commands are sent to the running app as a distributed notification, so scripts a
 ## Releasing
 `scripts/release.sh 0.2.0` builds a universal app (Apple Silicon and Intel) and `build/NotchBar-0.2.0.dmg`, laid out as NotchBar beside an Applications shortcut (via `dmgbuild`, installed into `build/.venv` on first run). Pushing a tag such as `v0.2.0` runs the same script in GitHub Actions and publishes the DMG to a GitHub Release.
 
-Without signing credentials the DMG is ad-hoc signed, so users approve it once in Privacy & Security. To sign and notarize, join the Apple Developer Program, create a **Developer ID Application** certificate, and add these repository secrets: `MACOS_CERTIFICATE` (base64 .p12), `MACOS_CERTIFICATE_PASSWORD`, `SIGN_IDENTITY`, `APPLE_ID`, `APPLE_TEAM_ID` and `APPLE_APP_PASSWORD` (an app-specific password). Locally, set `SIGN_IDENTITY` plus `NOTARY_PROFILE` (from `xcrun notarytool store-credentials`). The icon is drawn by `scripts/make-icon.py`.
+Without signing credentials the DMG is ad-hoc signed, so users approve it once in Privacy & Security. To sign and notarize, join the Apple Developer Program, create a **Developer ID Application** certificate, and add these repository secrets: `MACOS_CERTIFICATE` (base64 .p12), `MACOS_CERTIFICATE_PASSWORD`, `SIGN_IDENTITY`, `APPLE_ID`, `APPLE_TEAM_ID` and `APPLE_APP_PASSWORD` (an app-specific password). Locally, set `SIGN_IDENTITY` plus `NOTARY_PROFILE` (from `xcrun notarytool store-credentials`). The icon is drawn by `scripts/make-icon.py` and the in-DMG guide by `scripts/make-open-guide.py`.
 
 ## Privacy
 Everything stays on your Mac. NotchBar makes no network requests and collects nothing; the network meter only reads interface byte counters. Claude Code events travel between the hook and the app as local distributed notifications.
