@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# Builds a universal NotchBar.app and packages it as build/NotchBar-<version>.dmg.
+#
+#   scripts/release.sh 0.2.0
+#
+# Signing and notarization are optional and switch on when these are set:
+#   SIGN_IDENTITY   "Developer ID Application: Your Name (TEAMID)"
+#   NOTARY_PROFILE  a notarytool keychain profile (xcrun notarytool store-credentials), or
+#   APPLE_ID + APPLE_TEAM_ID + APPLE_APP_PASSWORD  (app-specific password, used in CI)
+# Without them the DMG is ad-hoc signed and macOS will ask users to approve it in
+# System Settings > Privacy & Security the first time.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+VERSION="${1:?usage: scripts/release.sh <version>}"
+VERSION="${VERSION#v}"
+DMG="build/NotchBar-$VERSION.dmg"
+STAGING="build/dmg"
+
+VERSION="$VERSION" BUILD_NUMBER="${BUILD_NUMBER:-$(git rev-list --count HEAD)}" ./build.sh --universal
+
+rm -rf "$STAGING" "$DMG"
+mkdir -p "$STAGING"
+cp -R build/NotchBar.app "$STAGING/"
+ln -s /Applications "$STAGING/Applications"
+hdiutil create -volname "NotchBar $VERSION" -srcfolder "$STAGING" -fs HFS+ -format UDZO -ov "$DMG" >/dev/null
+rm -rf "$STAGING"
+
+if [[ -n "${SIGN_IDENTITY:-}" ]]; then
+  codesign --force --timestamp --sign "$SIGN_IDENTITY" "$DMG"
+
+  NOTARY_ARGS=()
+  if [[ -n "${NOTARY_PROFILE:-}" ]]; then
+    NOTARY_ARGS=(--keychain-profile "$NOTARY_PROFILE")
+  elif [[ -n "${APPLE_ID:-}" && -n "${APPLE_TEAM_ID:-}" && -n "${APPLE_APP_PASSWORD:-}" ]]; then
+    NOTARY_ARGS=(--apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_PASSWORD")
+  fi
+
+  if (( ${#NOTARY_ARGS[@]} )); then
+    xcrun notarytool submit "$DMG" "${NOTARY_ARGS[@]}" --wait
+    xcrun stapler staple "$DMG"
+    spctl --assess --type open --context context:primary-signature --verbose "$DMG"
+    echo "Signed and notarized."
+  else
+    echo "Signed but NOT notarized: set NOTARY_PROFILE or APPLE_ID/APPLE_TEAM_ID/APPLE_APP_PASSWORD." >&2
+  fi
+else
+  echo "Ad-hoc build: not signed with a Developer ID, so Gatekeeper will warn on first open." >&2
+fi
+
+shasum -a 256 "$DMG" | tee "$DMG.sha256"
+echo "Created $DMG"

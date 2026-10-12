@@ -5,10 +5,12 @@ import SwiftUI
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private static let loginItemConfiguredKey = "loginItemConfigured"
+    private static let onboardingShownKey = "onboardingShown"
 
     private let model = NotchViewModel()
     private let battery = BatteryMonitor()
     private var windowController: NotchWindowController?
+    private let onboarding = OnboardingWindowController()
     private var statusItem: NSStatusItem?
     private var menu = NSMenu()
     private var hoverItem: NSMenuItem?
@@ -18,9 +20,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var cancellables = Set<AnyCancellable>()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        if AppMover.offerMoveIfNeeded() { return }
         setUpStatusItem()
         model.statusItemFrame = { [weak self] in self?.statusItem?.button?.window?.frame }
         model.refreshGeometry()
+        // The item's frame isn't final at launch, and moves when other items come and go.
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.didMoveNotification,
+            object: statusItem?.button?.window,
+            queue: .main
+        ) { [weak self] _ in self?.model.refreshGeometry() }
         windowController = NotchWindowController(model: model, battery: battery)
         configureLoginItemOnFirstLaunch()
 
@@ -38,6 +47,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ) { [weak self] notification in
             guard let command = NotchCommand.decode(notification) else { return }
             self?.handle(command)
+        }
+
+        if !UserDefaults.standard.bool(forKey: Self.onboardingShownKey) {
+            UserDefaults.standard.set(true, forKey: Self.onboardingShownKey)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in self?.onboarding.show() }
+            return
         }
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
@@ -75,6 +90,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case "open": model.open()
         case "close": model.close()
         case "toggle": model.toggle()
+        case "setup": onboarding.show()
         case "hide": setHidden(true)
         case "show": setHidden(false)
 
@@ -131,6 +147,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         item.button?.setAccessibilityLabel("NotchBar")
 
         menu.addItem(withTitle: "Toggle Island", action: #selector(toggleNotch), keyEquivalent: "t").target = self
+        menu.addItem(withTitle: "Setup...", action: #selector(showSetup), keyEquivalent: ",").target = self
         menu.addItem(withTitle: "Send Test Alert", action: #selector(sendTestAlert), keyEquivalent: "a").target = self
         menu.addItem(withTitle: "Test Permission Card", action: #selector(sendTestPermission), keyEquivalent: "p").target = self
         menu.addItem(.separator())
@@ -198,6 +215,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     // MARK: - Menu actions
+
+    @objc private func showSetup() {
+        onboarding.show()
+    }
 
     @objc private func toggleNotch() {
         model.toggle()

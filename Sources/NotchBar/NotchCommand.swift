@@ -66,6 +66,7 @@ enum NotchCLI {
       toast <title> [subtitle] [sf-symbol] [tint]   Pop a live-activity banner
       open | close | toggle                         Expand or collapse the notch
       hide | show                                   Hide or show the resting notch
+      setup                                         Open the setup window
       hook                                          Claude Code hook (reads event JSON on stdin)
 
     Tints: blue, green, orange, red, purple, yellow, pink, teal
@@ -91,7 +92,7 @@ enum NotchCLI {
                 symbol: arguments.count > 3 ? arguments[3] : nil,
                 tint: arguments.count > 4 ? arguments[4] : nil
             ).post()
-        case "open", "close", "toggle", "hide", "show":
+        case "open", "close", "toggle", "hide", "show", "setup":
             NotchCommand(action: action).post()
         case "hook":
             return ClaudeHook.run()

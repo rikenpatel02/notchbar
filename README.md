@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/images/icon.png" width="128" alt="NotchBar icon"></p>
+
 # NotchBar
 
 A macOS menu bar app that shows a "Dynamic Island" for live activities, Claude Code and system stats.
@@ -6,6 +8,29 @@ A macOS menu bar app that shows a "Dynamic Island" for live activities, Claude C
 
 - **Macs with a notch:** the island wraps around the hardware notch. That area is dead space, so it never covers menu bar icons.
 - **Macs without a notch:** it works like Live Activities in macOS Tahoe. The compact view is a menu bar item, and clicking it drops the expanded view down *below* the menu bar. Right-click the item for settings.
+
+## Install
+1. Download the latest **NotchBar-x.y.z.dmg** from [Releases](https://github.com/rikenpatel02/notchbar/releases/latest).
+2. Open it and drag **NotchBar** onto **Applications**.
+3. Open NotchBar from Applications.
+
+Requires macOS 13 or later, on Apple Silicon or Intel. If you open it straight from the disk image or Downloads, NotchBar offers to move itself to Applications. It needs a fixed location so Claude Code can find it and it can open at login.
+
+**"Apple could not verify NotchBar"?** Builds that aren't notarized by Apple show this the first time. Open **System Settings > Privacy & Security**, scroll to Security, click **Open Anyway** next to NotchBar, and confirm with your password. You only do this once.
+
+## First launch and permissions
+NotchBar has no Dock icon; it lives in the menu bar. On first launch a setup window walks through three optional steps. Reopen it any time with **Setup...** in the menu bar item's right-click menu, or `NotchBar setup` from a terminal.
+
+| Step | What it does | What macOS shows |
+|---|---|---|
+| **Connect Claude Code** | Adds NotchBar's hooks to `~/.claude/settings.json`, keeping your other settings and hooks, and saves `settings.json.notchbar-backup` first. **Disconnect** removes only NotchBar's hooks. | Nothing |
+| **Open at login** | Registers NotchBar as a login item (on by default). | A "Background Items Added" notification; manage it in System Settings > General > Login Items |
+| **Jump to terminal tabs** | Lets a click on a session bring its Terminal or iTerm2 tab to the front, and skips banners for the tab you're already looking at. | "NotchBar wants access to control Terminal." Change it later in Privacy & Security > Automation |
+
+Other prompts you might see:
+- **Downloads folder:** the first click on the Downloads shortcut in the panel. macOS asks before any app opens that folder.
+
+NotchBar never asks for Accessibility, Screen Recording, Full Disk Access or network access. Every permission is optional; without them, the stats and island still work.
 
 ## Menu bar item
 Always shows, left to right:
@@ -35,6 +60,11 @@ Turn the stats off with **Show Stats in Menu Bar** in the right-click menu. Samp
 
 Hovering expands it and moving away collapses it. Opened with a click, the menu or the CLI, it stays open until you click outside it.
 
+## Uninstall
+1. Right-click the menu bar item, choose **Setup...**, click **Disconnect** next to Claude Code, and turn off **Open at login**.
+2. Quit NotchBar from the same menu and drag it from Applications to the Trash.
+3. Optionally, `defaults delete com.rikenpatel.notchbar` clears its preferences.
+
 ## Build & run
 ```bash
 ./build.sh --install    # build, copy to /Applications, launch (registers Launch at Login on first run)
@@ -43,7 +73,7 @@ Hovering expands it and moving away collapses it. Opened with a click, the menu 
 You need macOS 13 or later and a Swift toolchain (the Xcode Command Line Tools are enough). Turn Launch at Login on or off from the right-click menu.
 
 ## Claude Code
-Add NotchBar as a command hook in `~/.claude/settings.json` (install the app to `/Applications` first). Merge this into any `hooks` you already have:
+**Connect Claude Code** in the setup window does this for you. To do it by hand instead, add NotchBar as a command hook in `~/.claude/settings.json` (with the app in `/Applications`), merged into any `hooks` you already have:
 
 ```json
 {
@@ -71,12 +101,17 @@ Jumping to a terminal tab and checking which tab is in front use AppleScript, so
 ```bash
 B=build/NotchBar.app/Contents/MacOS/NotchBar
 $B toast "Build passed" "notchbar - 12s" checkmark.circle.fill green
-$B open | close | toggle | hide | show
+$B open | close | toggle | hide | show | setup
 ```
 Commands are sent to the running app as a distributed notification, so scripts and hooks need no extra permissions.
 
 ## Demo mode
 `NOTCHBAR_DEMO=1 build/NotchBar.app/Contents/MacOS/NotchBar` shows sample sessions and apps instead of your own, and ignores real Claude Code events. Use it for screenshots; Quit is disabled while it runs.
+
+## Releasing
+`scripts/release.sh 0.2.0` builds a universal app (Apple Silicon and Intel) and `build/NotchBar-0.2.0.dmg` with an Applications shortcut. Pushing a tag such as `v0.2.0` runs the same script in GitHub Actions and publishes the DMG to a GitHub Release.
+
+Without signing credentials the DMG is ad-hoc signed, so users approve it once in Privacy & Security. To sign and notarize, join the Apple Developer Program, create a **Developer ID Application** certificate, and add these repository secrets: `MACOS_CERTIFICATE` (base64 .p12), `MACOS_CERTIFICATE_PASSWORD`, `SIGN_IDENTITY`, `APPLE_ID`, `APPLE_TEAM_ID` and `APPLE_APP_PASSWORD` (an app-specific password). Locally, set `SIGN_IDENTITY` plus `NOTARY_PROFILE` (from `xcrun notarytool store-credentials`). The icon is drawn by `scripts/make-icon.py`.
 
 ## Privacy
 Everything stays on your Mac. NotchBar makes no network requests and collects nothing; the network meter only reads interface byte counters. Claude Code events travel between the hook and the app as local distributed notifications.

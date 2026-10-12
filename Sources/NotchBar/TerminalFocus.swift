@@ -57,6 +57,30 @@ enum TerminalFocus {
         }
     }
 
+    enum AutomationStatus {
+        case allowed, denied, notAsked, notRunning
+    }
+
+    /// Checks without prompting; macOS can only answer while the terminal is running.
+    static func automationStatus(bundleIdentifier: String = "com.apple.Terminal") -> AutomationStatus {
+        let target = NSAppleEventDescriptor(bundleIdentifier: bundleIdentifier)
+        switch AEDeterminePermissionToAutomateTarget(target.aeDesc, typeWildCard, typeWildCard, false) {
+        case noErr: return .allowed
+        case OSStatus(errAEEventNotPermitted): return .denied
+        case OSStatus(procNotFound): return .notRunning
+        default: return .notAsked
+        }
+    }
+
+    /// Shows macOS's "control Terminal" prompt now, instead of on the first session click.
+    static func requestAutomation(completion: @escaping (AutomationStatus) -> Void) {
+        queue.async {
+            _ = run(#"tell application "Terminal" to count windows"#)
+            let status = automationStatus()
+            DispatchQueue.main.async { completion(status) }
+        }
+    }
+
     static func openAutomationSettings() {
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation") {
             NSWorkspace.shared.open(url)
