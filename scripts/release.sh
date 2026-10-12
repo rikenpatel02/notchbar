@@ -48,5 +48,5 @@ else
   echo "Ad-hoc build: not signed with a Developer ID, so Gatekeeper will warn on first open." >&2
 fi
 
-shasum -a 256 "$DMG" | tee "$DMG.sha256"
+(cd build && shasum -a 256 "$(basename "$DMG")") | tee "$DMG.sha256"
 echo "Created $DMG"
