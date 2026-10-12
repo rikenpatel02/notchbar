@@ -5,8 +5,9 @@
 #
 # Signing and notarization are optional and switch on when these are set:
 #   SIGN_IDENTITY   "Developer ID Application: Your Name (TEAMID)"
+#   NOTARY_KEY + NOTARY_KEY_ID + NOTARY_ISSUER  App Store Connect API key (.p8 path), or
 #   NOTARY_PROFILE  a notarytool keychain profile (xcrun notarytool store-credentials), or
-#   APPLE_ID + APPLE_TEAM_ID + APPLE_APP_PASSWORD  (app-specific password, used in CI)
+#   APPLE_ID + APPLE_TEAM_ID + APPLE_APP_PASSWORD  (app-specific password)
 # Without them the DMG is ad-hoc signed and macOS will ask users to approve it in
 # System Settings > Privacy & Security the first time.
 set -euo pipefail
@@ -38,7 +39,9 @@ if [[ -n "${SIGN_IDENTITY:-}" ]]; then
   codesign --force --timestamp --sign "$SIGN_IDENTITY" "$DMG"
 
   NOTARY_ARGS=()
-  if [[ -n "${NOTARY_PROFILE:-}" ]]; then
+  if [[ -n "${NOTARY_KEY:-}" && -n "${NOTARY_KEY_ID:-}" && -n "${NOTARY_ISSUER:-}" ]]; then
+    NOTARY_ARGS=(--key "$NOTARY_KEY" --key-id "$NOTARY_KEY_ID" --issuer "$NOTARY_ISSUER")
+  elif [[ -n "${NOTARY_PROFILE:-}" ]]; then
     NOTARY_ARGS=(--keychain-profile "$NOTARY_PROFILE")
   elif [[ -n "${APPLE_ID:-}" && -n "${APPLE_TEAM_ID:-}" && -n "${APPLE_APP_PASSWORD:-}" ]]; then
     NOTARY_ARGS=(--apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_PASSWORD")
@@ -50,7 +53,7 @@ if [[ -n "${SIGN_IDENTITY:-}" ]]; then
     spctl --assess --type open --context context:primary-signature --verbose "$DMG"
     echo "Signed and notarized."
   else
-    echo "Signed but NOT notarized: set NOTARY_PROFILE or APPLE_ID/APPLE_TEAM_ID/APPLE_APP_PASSWORD." >&2
+    echo "Signed but NOT notarized: set NOTARY_KEY/NOTARY_KEY_ID/NOTARY_ISSUER, NOTARY_PROFILE or APPLE_ID/APPLE_TEAM_ID/APPLE_APP_PASSWORD." >&2
   fi
 else
   echo "Ad-hoc build: not signed with a Developer ID, so Gatekeeper will warn on first open." >&2

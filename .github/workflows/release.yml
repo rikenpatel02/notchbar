@@ -5,7 +5,9 @@ name: Release
 #   MACOS_CERTIFICATE           base64 of the "Developer ID Application" .p12
 #   MACOS_CERTIFICATE_PASSWORD  password of that .p12
 #   SIGN_IDENTITY               e.g. "Developer ID Application: Your Name (TEAMID)"
-#   APPLE_ID, APPLE_TEAM_ID, APPLE_APP_PASSWORD  for notarytool (app-specific password)
+#   APPSTORE_API_KEY            base64 of the App Store Connect API key (.p8), for notarytool
+#   APPSTORE_API_KEY_ID, APPSTORE_API_ISSUER     that key's Key ID and Issuer ID
+#   (or APPLE_ID, APPLE_TEAM_ID, APPLE_APP_PASSWORD to notarize with an app-specific password)
 on:
   push:
     tags: ["v*"]
@@ -50,10 +52,18 @@ jobs:
 
       - name: Build DMG
         env:
+          APPSTORE_API_KEY: ${{ secrets.APPSTORE_API_KEY }}
+          NOTARY_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          NOTARY_ISSUER: ${{ secrets.APPSTORE_API_ISSUER }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
-        run: scripts/release.sh "${{ inputs.version || github.ref_name }}"
+        run: |
+          if [[ -n "$APPSTORE_API_KEY" ]]; then
+            export NOTARY_KEY="$RUNNER_TEMP/AuthKey.p8"
+            echo "$APPSTORE_API_KEY" | base64 --decode > "$NOTARY_KEY"
+          fi
+          scripts/release.sh "${{ inputs.version || github.ref_name }}"
 
       - name: Verify signature
         run: |
