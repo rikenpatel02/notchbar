@@ -10,13 +10,21 @@ A macOS menu bar app that shows a "Dynamic Island" for live activities, Claude C
 - **Macs without a notch:** it works like Live Activities in macOS Tahoe. The compact view is a menu bar item, and clicking it drops the expanded view down *below* the menu bar. Right-click the item for settings.
 
 ## Install
-1. Download the latest **NotchBar-x.y.z.dmg** from [Releases](https://github.com/rikenpatel02/notchbar/releases/latest).
-2. Open it and drag **NotchBar** onto **Applications**.
-3. Open NotchBar from Applications.
+Paste this into Terminal:
 
-Requires macOS 13 or later, on Apple Silicon or Intel. If you open it straight from the disk image or Downloads, NotchBar offers to move itself to Applications. It needs a fixed location so Claude Code can find it and it can open at login.
+```bash
+curl -fsSL https://raw.githubusercontent.com/rikenpatel02/notchbar/main/install.sh | bash
+```
 
-**"Apple could not verify NotchBar"?** Builds that aren't notarized by Apple show this the first time. Open **System Settings > Privacy & Security**, scroll to Security, click **Open Anyway** next to NotchBar, and confirm with your password. You only do this once. The disk image includes **If NotchBar won't open**, a picture guide to these steps.
+It downloads the latest release, checks it against the release's SHA-256 checksum, copies NotchBar into Applications and opens it. Run it again any time to update. Read [install.sh](install.sh) first if you like; it's short.
+
+Requires macOS 13 or later, on Apple Silicon or Intel.
+
+### Or download the DMG
+1. Download **NotchBar-x.y.z.dmg** from [Releases](https://github.com/rikenpatel02/notchbar/releases/latest), open it and drag **NotchBar** onto **Applications**.
+2. Open NotchBar from Applications. If you open it from the disk image or Downloads instead, it offers to move itself, because it needs a fixed location for Claude Code and Open at login.
+
+**"Apple could not verify NotchBar"?** Releases aren't notarized by Apple yet, so macOS blocks the first open of a downloaded copy (the Terminal install above avoids this). Click **Done**, open **System Settings > Privacy & Security**, scroll to Security, click **Open Anyway** next to NotchBar, and confirm with your password. You only do this once per version. The disk image includes **If NotchBar won't open**, a picture guide to these steps.
 
 ## First launch and permissions
 NotchBar has no Dock icon; it lives in the menu bar. On first launch a setup window walks through three optional steps. Reopen it any time with **Setup...** in the menu bar item's right-click menu, or `NotchBar setup` from a terminal.
