@@ -9,6 +9,12 @@ name: Release
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to build as a dry run (signs and notarizes, publishes nothing)"
+        required: true
+        default: "0.0.0-dryrun"
 
 permissions:
   contents: write
@@ -35,9 +41,11 @@ jobs:
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
           security set-keychain-settings -lut 21600 "$KEYCHAIN"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
-          security import "$RUNNER_TEMP/certificate.p12" -P "$MACOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN"
-          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          # Import the identity (key + certificates); -s grants codesign use of the signing key.
+          security import "$RUNNER_TEMP/certificate.p12" -P "$MACOS_CERTIFICATE_PASSWORD" -A -f pkcs12 -k "$KEYCHAIN" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" > /dev/null
           security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+          security find-identity -v -p codesigning "$KEYCHAIN"
           echo "SIGN_IDENTITY=$SIGN_IDENTITY" >> "$GITHUB_ENV"
 
       - name: Build DMG
@@ -45,9 +53,26 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
-        run: scripts/release.sh "$GITHUB_REF_NAME"
+        run: scripts/release.sh "${{ inputs.version || github.ref_name }}"
+
+      - name: Verify signature
+        run: |
+          VERSION="${{ inputs.version || github.ref_name }}"
+          VERSION="${VERSION#v}"
+          MOUNT=$(hdiutil attach -nobrowse -readonly "build/NotchBar-$VERSION.dmg" | tail -1 | cut -f3)
+          codesign -dvv "$MOUNT/NotchBar.app" 2>&1 | grep -E "Authority|TeamIdentifier|Timestamp|flags" || true
+          spctl --assess --type execute -vv "$MOUNT/NotchBar.app" || true
+          hdiutil detach "$MOUNT"
+
+      - name: Upload dry-run DMG
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: NotchBar-dryrun
+          path: build/NotchBar-*.dmg
 
       - name: Publish release
+        if: github.event_name == 'push'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
