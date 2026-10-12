@@ -15,16 +15,18 @@ cd "$(dirname "$0")/.."
 VERSION="${1:?usage: scripts/release.sh <version>}"
 VERSION="${VERSION#v}"
 DMG="build/NotchBar-$VERSION.dmg"
-STAGING="build/dmg"
 
 VERSION="$VERSION" BUILD_NUMBER="${BUILD_NUMBER:-$(git rev-list --count HEAD)}" ./build.sh --universal
 
-rm -rf "$STAGING" "$DMG"
-mkdir -p "$STAGING"
-cp -R build/NotchBar.app "$STAGING/"
-ln -s /Applications "$STAGING/Applications"
-hdiutil create -volname "NotchBar $VERSION" -srcfolder "$STAGING" -fs HFS+ -format UDZO -ov "$DMG" >/dev/null
-rm -rf "$STAGING"
+# dmgbuild lays out the install window (background, icon positions) without Finder
+# scripting, so it also works on CI. It lives in a private virtualenv under build/.
+VENV="build/.venv"
+if [[ ! -x "$VENV/bin/dmgbuild" ]]; then
+  python3 -m venv "$VENV"
+  "$VENV/bin/pip" install --quiet "dmgbuild==1.6.5"
+fi
+rm -f "$DMG"
+"$VENV/bin/dmgbuild" -s scripts/dmg-settings.py -D app=build/NotchBar.app "NotchBar $VERSION" "$DMG"
 
 if [[ -n "${SIGN_IDENTITY:-}" ]]; then
   codesign --force --timestamp --sign "$SIGN_IDENTITY" "$DMG"
