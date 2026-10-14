@@ -114,7 +114,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 project: project,
                 tool: command.tool ?? "tool",
                 detail: command.detail ?? "",
-                expiresAt: Date().addingTimeInterval((command.timeout ?? 120) + 5)
+                expiresAt: Date().addingTimeInterval((command.timeout ?? 120) + 5),
+                questions: command.questions ?? []
             ))
             NSSound(named: "Tink")?.play()
             model.open()

@@ -45,7 +45,7 @@ NotchBar never asks for Accessibility, Screen Recording, Full Disk Access or net
 
 ## Menu bar item
 Always shows, left to right:
-- **Claude:** "Working" / "N working", or "Approve" when a permission card is waiting
+- **Claude:** "Working" / "N working", "Approve" when a permission card is waiting, or "Question" when Claude is asking you something
 - **CPU:** share of all cores busy over the last second. Turns orange at 75% and red at 90%
 - **MEM:** Activity Monitor's "Memory Used" as a share of RAM. Its color follows macOS **memory pressure**, not the percent (macOS keeps RAM full on purpose), so it only turns orange or red when memory is actually short
 - **Network:** download and upload rates across Wi-Fi, Ethernet and cellular
@@ -60,7 +60,7 @@ Turn the stats off with **Show Stats in Menu Bar** in the right-click menu. Samp
     <td width="50%"><img src="docs/images/banner.png" alt="Live activity banner when Claude finishes"></td>
   </tr>
   <tr>
-    <td align="center"><b>Approve or deny</b> Claude Code tool calls</td>
+    <td align="center"><b>Approve or deny</b> Claude Code tool calls, or answer its questions</td>
     <td align="center"><b>Live banners</b> when Claude finishes or needs you</td>
   </tr>
 </table>
@@ -104,7 +104,7 @@ You need macOS 13 or later and a Swift toolchain (the Xcode Command Line Tools a
 The hook reports the session's tty, terminal app (`TERM_PROGRAM`) and permission mode along with each event.
 
 - **Working / Done / Waiting:** live status in the menu bar item, the session list, and banners. Banners are skipped when that session's terminal tab is already the one in front (Terminal and iTerm2).
-- **PermissionRequest:** the island opens with an Approve/Deny card and the hook waits for your choice. If you don't answer within 120s (override with `NOTCHBAR_PERMISSION_TIMEOUT`, and keep the hook `timeout` above it), the hook exits without a decision and Claude falls back to its normal terminal prompt. If NotchBar isn't running, the hook exits immediately.
+- **PermissionRequest:** the island opens with an Approve/Deny card and the hook waits for your choice. If you don't answer within 120s (override with `NOTCHBAR_PERMISSION_TIMEOUT`, and keep the hook `timeout` above it), the hook exits without a decision and Claude falls back to its normal terminal prompt. When Claude asks a multiple-choice question (AskUserQuestion), the card shows the question and its options instead: click an option to answer, or **Answer in Terminal** to type your own. If NotchBar isn't running, the hook exits immediately.
 - **Skip-permissions sessions:** sessions started with `--dangerously-skip-permissions` never ask, so no cards appear for them. Start Claude without that flag to approve from the island.
 - **Sessions started before NotchBar (optional):** if you already have a hook that writes one JSON file per session to `~/.claude/status/` (fields `session_id`, `project`, `status`, `updated_at`, `tty`, `term`, `message`), NotchBar restores those sessions at launch and every 30s, keeping only terminals that still run `claude`. Without it, sessions appear from their next hook event.
 

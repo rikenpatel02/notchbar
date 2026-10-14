@@ -49,8 +49,10 @@ struct StatusItemView: View {
     }
 
     private var claudeBadge: (symbol: String, title: String, tint: Color)? {
-        if !claude.requests.isEmpty {
-            return ("hand.raised.fill", "Approve", .orange)
+        if let request = claude.requests.first {
+            return request.questions.isEmpty
+                ? ("hand.raised.fill", "Approve", .orange)
+                : ("questionmark.bubble.fill", "Question", .orange)
         }
         let working = claude.workingCount
         guard working > 0 else { return nil }

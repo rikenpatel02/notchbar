@@ -97,6 +97,21 @@ final class NotchViewModel: ObservableObject {
         claude.sessions.isEmpty ? 0 : 10 + 28 * CGFloat(min(claude.sessions.count, 4))
     }
 
+    /// Height of the question card's content: question lines, option rows and the button row.
+    private var questionContentHeight: CGFloat? {
+        guard let questions = claude.requests.first?.questions, !questions.isEmpty else { return nil }
+        var height: CGFloat = 4 + 14 + 30 + 10
+        for (index, question) in questions.enumerated() {
+            height += (index > 0 ? 14 : 0) + 20 + 6
+            let lines = CGFloat(max(1, question.question.count / 70 + 1))
+            height += (lines - 1) * 16
+            for option in question.options {
+                height += (option.description?.isEmpty == false ? 46 : 30) + 6
+            }
+        }
+        return min(height, 360)
+    }
+
     private var notchModeSize: CGSize {
         let notch = geometry.notchSize
         switch state {
@@ -105,6 +120,9 @@ final class NotchViewModel: ObservableObject {
         case .peek:
             return CGSize(width: notch.width + 220, height: notch.height + 50)
         case .open:
+            if let content = questionContentHeight {
+                return CGSize(width: max(notch.width + 340, 560), height: notch.height + content + 12)
+            }
             if !claude.requests.isEmpty {
                 return CGSize(width: max(notch.width + 340, 560), height: notch.height + 156)
             }
@@ -119,6 +137,9 @@ final class NotchViewModel: ObservableObject {
         case .peek:
             return CGSize(width: 360, height: 58)
         case .open:
+            if let content = questionContentHeight {
+                return CGSize(width: 520, height: content + 34)
+            }
             if !claude.requests.isEmpty {
                 return CGSize(width: 520, height: 178)
             }

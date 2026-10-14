@@ -20,6 +20,7 @@ struct NotchCommand: Codable {
     var tty: String? = nil
     var term: String? = nil
     var bypassPermissions: Bool? = nil
+    var questions: [ClaudeQuestion]? = nil
 
     var toast: Toast {
         Toast(

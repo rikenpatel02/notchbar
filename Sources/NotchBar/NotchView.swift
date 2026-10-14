@@ -46,7 +46,10 @@ struct NotchRootView: View {
             switch model.state {
             case .open:
                 Group {
-                    if let request = model.claude.requests.first {
+                    if let request = model.claude.requests.first, !request.questions.isEmpty {
+                        QuestionCard(model: model, request: request)
+                            .id(request.id)
+                    } else if let request = model.claude.requests.first {
                         PermissionCard(model: model, request: request)
                     } else {
                         ExpandedContent(model: model, battery: battery)
@@ -278,6 +281,174 @@ private struct PermissionCard: View {
         if model.claude.requests.isEmpty {
             model.close()
         }
+    }
+}
+
+/// Claude's multiple-choice question (AskUserQuestion). With one single-choice question, clicking
+/// an option answers it; otherwise pick an option per question and press Submit.
+private struct QuestionCard: View {
+    @ObservedObject var model: NotchViewModel
+    let request: PermissionRequest
+
+    @State private var picked: [Int: [String]] = [:]
+
+    private var answersImmediately: Bool {
+        request.questions.count == 1 && request.questions[0].multiSelect != true
+    }
+
+    private var isComplete: Bool {
+        request.questions.indices.allSatisfy { !(picked[$0] ?? []).isEmpty }
+    }
+
+    var body: some View {
+        let total = model.claude.requests.count
+
+        VStack(spacing: 0) {
+            HeaderRow(geometry: model.geometry) {
+                Label("Claude Code", systemImage: "sparkle")
+                    .foregroundStyle(ClaudeStore.accent)
+            } trailing: {
+                Text(total > 1 ? "\(request.project)  1 of \(total)" : request.project)
+                    .foregroundStyle(.white.opacity(0.55))
+                    .lineLimit(1)
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 14) {
+                        ForEach(Array(request.questions.enumerated()), id: \.offset) { index, question in
+                            questionView(index, question)
+                        }
+                    }
+                }
+
+                HStack(spacing: 10) {
+                    Button("Answer in Terminal") { answerInTerminal() }
+                        .buttonStyle(CapsuleButtonStyle(fill: .white.opacity(0.1), text: .white.opacity(0.85)))
+                        .help("Type your own answer in Claude Code")
+                    Spacer()
+                    if !answersImmediately {
+                        Button("Submit") { submit() }
+                            .buttonStyle(CapsuleButtonStyle(fill: isComplete ? .green : .white.opacity(0.1),
+                                                            text: isComplete ? .black : .white.opacity(0.4)))
+                            .disabled(!isComplete)
+                    }
+                }
+            }
+            .padding(.horizontal, 26)
+            .padding(.top, 4)
+            .padding(.bottom, 14)
+            .frame(maxHeight: .infinity, alignment: .top)
+        }
+    }
+
+    private func questionView(_ index: Int, _ question: ClaudeQuestion) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Image(systemName: "questionmark.bubble.fill")
+                    .foregroundStyle(ClaudeStore.accent)
+                Text(question.question)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .fixedSize(horizontal: false, vertical: true)
+                if question.multiSelect == true {
+                    Text("Choose any")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.45))
+                }
+            }
+            ForEach(question.options, id: \.self) { option in
+                OptionRow(option: option,
+                          selected: (picked[index] ?? []).contains(option.label),
+                          multiSelect: question.multiSelect == true) {
+                    choose(option.label, for: index, multiSelect: question.multiSelect == true)
+                }
+            }
+        }
+    }
+
+    private func choose(_ label: String, for index: Int, multiSelect: Bool) {
+        if multiSelect {
+            var current = picked[index] ?? []
+            if let at = current.firstIndex(of: label) { current.remove(at: at) } else { current.append(label) }
+            picked[index] = current
+        } else {
+            picked[index] = [label]
+        }
+        if answersImmediately { submit() }
+    }
+
+    private func submit() {
+        guard isComplete else { return }
+        var answers: [String: String] = [:]
+        for (index, question) in request.questions.enumerated() {
+            let order = question.options.map(\.label)
+            let labels = (picked[index] ?? []).sorted { (order.firstIndex(of: $0) ?? 0) < (order.firstIndex(of: $1) ?? 0) }
+            answers[question.question] = labels.joined(separator: ", ")
+        }
+        model.claude.answer(request, with: answers)
+        closeIfDone()
+    }
+
+    private func answerInTerminal() {
+        let session = model.claude.sessions.first { $0.id == request.sessionId }
+        model.claude.answerInTerminal(request)
+        closeIfDone()
+        if let session {
+            TerminalFocus.focus(tty: session.tty, term: session.term) {}
+        }
+    }
+
+    private func closeIfDone() {
+        if model.claude.requests.isEmpty {
+            model.close()
+        }
+    }
+}
+
+private struct OptionRow: View {
+    let option: ClaudeQuestion.Option
+    let selected: Bool
+    let multiSelect: Bool
+    let action: () -> Void
+
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: selected
+                      ? (multiSelect ? "checkmark.square.fill" : "largecircle.fill.circle")
+                      : (multiSelect ? "square" : "circle"))
+                    .font(.system(size: 13))
+                    .foregroundStyle(selected ? ClaudeStore.accent : .white.opacity(0.4))
+                    .padding(.top, 1)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(option.label)
+                        .font(.system(size: 12.5, weight: .semibold))
+                        .foregroundStyle(.white)
+                    if let description = option.description, !description.isEmpty {
+                        Text(description)
+                            .font(.system(size: 11))
+                            .foregroundStyle(.white.opacity(0.55))
+                            .lineLimit(2)
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .fill(selected ? ClaudeStore.accent.opacity(0.22) : .white.opacity(hovering ? 0.12 : 0.07))
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .accessibilityLabel(option.description.map { "\(option.label). \($0)" } ?? option.label)
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
 

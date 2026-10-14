@@ -25,6 +25,21 @@ struct PermissionRequest: Identifiable, Equatable {
     let tool: String
     let detail: String
     let expiresAt: Date
+    /// Set when Claude is asking a multiple-choice question (AskUserQuestion) rather than asking to run a tool.
+    var questions: [ClaudeQuestion] = []
+}
+
+/// One question from Claude Code's AskUserQuestion tool.
+struct ClaudeQuestion: Codable, Equatable, Hashable {
+    struct Option: Codable, Equatable, Hashable {
+        var label: String
+        var description: String?
+    }
+
+    var question: String
+    var header: String?
+    var options: [Option]
+    var multiSelect: Bool?
 }
 
 /// Live state of every Claude Code session reporting through the hook.
@@ -116,7 +131,8 @@ final class ClaudeStore: ObservableObject {
 
     func add(_ request: PermissionRequest) {
         requests.append(request)
-        update(session: request.sessionId, project: request.project, status: .waiting, detail: "Approve \(request.tool)?")
+        let detail = request.questions.isEmpty ? "Approve \(request.tool)?" : "Question for you"
+        update(session: request.sessionId, project: request.project, status: .waiting, detail: detail)
     }
 
     func removeRequest(id: String) {
@@ -132,6 +148,18 @@ final class ClaudeStore: ObservableObject {
     /// Sends the decision back to the waiting hook process.
     func resolve(_ request: PermissionRequest, allow: Bool) {
         ClaudeReply(id: request.id, behavior: allow ? "allow" : "deny").post()
+        removeRequest(id: request.id)
+    }
+
+    /// Answers Claude's question; keys are the question text, multi-select answers are comma-separated.
+    func answer(_ request: PermissionRequest, with answers: [String: String]) {
+        ClaudeReply(id: request.id, behavior: "allow", answers: answers).post()
+        removeRequest(id: request.id)
+    }
+
+    /// Hands the question back to Claude Code's own prompt in the terminal.
+    func answerInTerminal(_ request: PermissionRequest) {
+        ClaudeReply(id: request.id, behavior: "ask").post()
         removeRequest(id: request.id)
     }
 
@@ -238,7 +266,9 @@ struct ClaudeReply: Codable {
     static let notificationName = Notification.Name("com.rikenpatel.notchbar.reply")
 
     var id: String
+    /// "allow", "deny", or "ask" to fall back to Claude Code's own prompt.
     var behavior: String
+    var answers: [String: String]? = nil
 
     func post() {
         guard let data = try? JSONEncoder().encode(self), let json = String(data: data, encoding: .utf8) else { return }

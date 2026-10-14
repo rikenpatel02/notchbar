@@ -1,8 +1,9 @@
 import AppKit
 
 /// `NotchBar hook`: Claude Code command hook. Reads the hook event JSON from stdin and
-/// forwards it to the running app. For PermissionRequest it blocks until Approve/Deny is
-/// clicked in the notch; on timeout it prints nothing so Claude falls back to its own prompt.
+/// forwards it to the running app. For PermissionRequest it blocks until Approve/Deny (or an
+/// answer to Claude's question) is clicked in the notch; on timeout, or "Answer in Terminal",
+/// it prints nothing so Claude falls back to its own prompt.
 enum ClaudeHook {
     private static let bundleIdentifier = "com.rikenpatel.notchbar"
 
@@ -48,7 +49,7 @@ enum ClaudeHook {
         case "SessionEnd":
             send("claude.end")
         case "PermissionRequest":
-            return requestPermission(session: session, project: project, tool: tool, summary: summary)
+            return requestPermission(input: input, session: session, project: project, tool: tool, summary: summary)
         default:
             return 0
         }
@@ -62,10 +63,13 @@ enum ClaudeHook {
             .contains { $0.processIdentifier != getpid() }
     }
 
-    private static func requestPermission(session: String, project: String, tool: String, summary: String) -> Int32 {
+    private static func requestPermission(input: [String: Any], session: String, project: String, tool: String, summary: String) -> Int32 {
         let id = UUID().uuidString
         let timeout = permissionTimeout
+        let toolInput = input["tool_input"] as? [String: Any] ?? [:]
+        let questions = input["tool_name"] as? String == "AskUserQuestion" ? decodeQuestions(toolInput["questions"]) : nil
         var behavior: String?
+        var answers: [String: String]?
 
         let observer = DistributedNotificationCenter.default().addObserver(
             forName: ClaudeReply.notificationName,
@@ -74,6 +78,7 @@ enum ClaudeHook {
         ) { notification in
             guard let reply = ClaudeReply.decode(notification), reply.id == id else { return }
             behavior = reply.behavior
+            answers = reply.answers
         }
         defer { DistributedNotificationCenter.default().removeObserver(observer) }
 
@@ -84,7 +89,8 @@ enum ClaudeHook {
             detail: summary,
             requestId: id,
             tool: tool,
-            timeout: timeout
+            timeout: timeout,
+            questions: questions
         ).post()
 
         let deadline = Date().addingTimeInterval(timeout)
@@ -97,10 +103,17 @@ enum ClaudeHook {
             flush()
             return 0
         }
+        // Printing nothing leaves the decision to Claude Code's own prompt.
+        if behavior == "ask" { return 0 }
 
-        let decision: [String: Any] = behavior == "allow"
+        var decision: [String: Any] = behavior == "allow"
             ? ["behavior": "allow"]
             : ["behavior": "deny", "message": "Denied from NotchBar"]
+        if behavior == "allow", let answers {
+            var updated = toolInput
+            updated["answers"] = answers
+            decision["updatedInput"] = updated
+        }
         let output: [String: Any] = [
             "hookSpecificOutput": ["hookEventName": "PermissionRequest", "decision": decision]
         ]
@@ -109,6 +122,13 @@ enum ClaudeHook {
             print(text)
         }
         return 0
+    }
+
+    private static func decodeQuestions(_ value: Any?) -> [ClaudeQuestion]? {
+        guard let value, let data = try? JSONSerialization.data(withJSONObject: value),
+              let questions = try? JSONDecoder().decode([ClaudeQuestion].self, from: data),
+              !questions.isEmpty else { return nil }
+        return questions
     }
 
     private static func flush() {
@@ -125,7 +145,10 @@ enum ClaudeHook {
 
     private static func describe(_ input: [String: Any]) -> String {
         guard let toolInput = input["tool_input"] as? [String: Any] else { return "" }
-        let keys = ["command", "file_path", "notebook_path", "url", "pattern", "query", "description", "prompt"]
+        if let questions = toolInput["questions"] as? [[String: Any]], let first = questions.first?["question"] as? String {
+            return first
+        }
+        let keys = ["command", "file_path", "notebook_path", "url", "pattern", "query", "description", "prompt", "plan"]
         guard let value = keys.lazy.compactMap({ toolInput[$0] as? String }).first else { return "" }
         let text = value.hasPrefix("/") && !value.contains(" ") ? URL(fileURLWithPath: value).lastPathComponent : value
         let singleLine = text.replacingOccurrences(of: "\n", with: " ")
